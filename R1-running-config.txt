@@ -1,0 +1,190 @@
+R1#show running-config
+Building configuration...
+
+
+Current configuration : 3054 bytes
+!
+! Last configuration change at 12:21:30 UTC Mon Jan 2 2006 by admin
+! NVRAM config last updated at 12:21:33 UTC Mon Jan 2 2006 by admin
+! NVRAM config last updated at 12:21:33 UTC Mon Jan 2 2006 by admin
+version 15.1
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+!
+hostname R1
+!
+boot-start-marker
+boot system flash:c2800nm-advipservicesk9-mz.151-4.M7.bin
+boot-end-marker
+!
+!
+enable secret 4 <REDACTED>
+!
+no aaa new-model
+!
+!
+dot11 syslog
+ip source-route
+!
+!
+ip cef
+ip dhcp excluded-address 10.0.0.1 10.0.0.99
+ip dhcp excluded-address 10.0.10.1
+ip dhcp excluded-address 10.0.20.1
+ip dhcp excluded-address 10.0.30.1
+ip dhcp excluded-address 10.0.20.2 10.0.20.50
+!
+ip dhcp pool LAB-POOL
+ network 10.0.0.0 255.255.255.0
+ default-router 10.0.0.1 
+ dns-server 8.8.8.8 8.8.4.4 
+ lease 0 12
+!
+ip dhcp pool VLAN10-USERS
+ network 10.0.10.0 255.255.255.0
+ default-router 10.0.10.1 
+ dns-server 8.8.8.8 8.8.4.4 
+ lease 0 12
+!
+ip dhcp pool VLAN20-SERVERS
+ network 10.0.20.0 255.255.255.0
+ default-router 10.0.20.1 
+ dns-server 8.8.8.8 8.8.4.4 
+ lease 0 12
+!
+ip dhcp pool VLAN30-MGMT
+ network 10.0.30.0 255.255.255.0
+ default-router 10.0.30.1 
+ dns-server 8.8.8.8 8.8.4.4 
+ lease 0 12
+!
+!
+!
+ip domain name home.lab
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+voice-card 0
+!
+crypto pki token default removal timeout 0
+!
+!
+!
+!
+license udi pid CISCO2851 sn <REDACTED>
+username admin privilege 15 secret 4 <REDACTED>
+!
+redundancy
+!
+!
+ip ssh version 2
+! 
+!
+!
+!
+!
+!
+!
+!
+interface GigabitEthernet0/0
+ description WAN-to-isp
+ ip address dhcp
+ ip nat outside
+ ip virtual-reassembly in
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/1
+ description LAN-TO-2960-SWITCH
+ no ip address
+ ip nat inside
+ ip virtual-reassembly in
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/1.10
+ encapsulation dot1Q 10
+ ip address 10.0.10.1 255.255.255.0
+ ip nat inside
+ ip virtual-reassembly in
+!
+interface GigabitEthernet0/1.20
+ encapsulation dot1Q 20
+ ip address 10.0.20.1 255.255.255.0
+ ip nat inside
+ ip virtual-reassembly in
+!
+interface GigabitEthernet0/1.30
+ encapsulation dot1Q 30
+ ip address 10.0.30.1 255.255.255.0
+ ip nat inside
+ ip virtual-reassembly in
+!
+interface BRI0/0/0
+ no ip address
+ encapsulation hdlc
+ shutdown
+!
+interface Serial0/1/0
+ no ip address
+ shutdown
+!
+ip forward-protocol nd
+no ip http server
+no ip http secure-server
+!
+!
+ip nat inside source list 1 interface GigabitEthernet0/0 overload
+!
+access-list 1 permit 10.0.10.0 0.0.0.255
+access-list 1 permit 10.0.20.0 0.0.0.255
+access-list 1 permit 10.0.30.0 0.0.0.255
+!
+!
+!
+!
+!
+!
+control-plane
+!
+!
+!
+!
+mgcp profile default
+!
+!
+!
+!
+!
+banner motd ^C
+***********************************************
+*  R1 (CISCO 2851) - AUTHORIZED ACCESS ONLY  *
+***********************************************
+^C
+!
+line con 0
+ logging synchronous
+ login local
+line aux 0
+line vty 0 4
+ exec-timeout 15 0
+ login local
+ transport input ssh
+!
+scheduler allocate 20000 1000
+end
+
+R1#
+
