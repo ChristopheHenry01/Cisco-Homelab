@@ -1,0 +1,176 @@
+!
+! R1 - Cisco 2851 - Integrated Network Phase D
+! Captured: 2026-06-28
+! Role: Inter-VLAN routing, DHCP, default route to pfSense
+!
+version 15.1
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+!
+hostname R1
+!
+boot-start-marker
+boot system flash:c2800nm-advipservicesk9-mz.151-4.M7.bin
+boot-end-marker
+!
+enable secret <REDACTED>
+!
+no aaa new-model
+!
+dot11 syslog
+ip source-route
+!
+ip cef
+!
+! ===== DHCP Exclusions =====
+ip dhcp excluded-address 10.0.0.1 10.0.0.99
+ip dhcp excluded-address 10.0.10.1
+ip dhcp excluded-address 10.0.20.1
+ip dhcp excluded-address 10.0.30.1
+ip dhcp excluded-address 10.0.20.2 10.0.20.50
+ip dhcp excluded-address 10.0.40.1 10.0.40.20
+ip dhcp excluded-address 10.0.20.100
+ip dhcp excluded-address 10.0.30.2 10.0.30.50
+!
+! ===== DHCP Pools =====
+! Legacy lab pool (pre-VLAN era; retained for reference)
+ip dhcp pool LAB-POOL
+ network 10.0.0.0 255.255.255.0
+ default-router 10.0.0.1
+ dns-server 8.8.8.8 8.8.4.4
+ lease 0 12
+!
+ip dhcp pool VLAN10-USERS
+ network 10.0.10.0 255.255.255.0
+ default-router 10.0.10.1
+ dns-server 1.1.1.1 8.8.8.8
+ lease 0 12
+!
+ip dhcp pool VLAN20-SERVERS
+ network 10.0.20.0 255.255.255.0
+ default-router 10.0.20.1
+ dns-server 1.1.1.1 8.8.8.8
+ lease 0 12
+!
+ip dhcp pool VLAN30-MGMT
+ network 10.0.30.0 255.255.255.0
+ default-router 10.0.30.1
+ dns-server 1.1.1.1 8.8.8.8
+ lease 0 12
+!
+ip dhcp pool VLAN40-SECLAB
+ network 10.0.40.0 255.255.255.0
+ default-router 10.0.40.1
+ dns-server 1.1.1.1 8.8.8.8
+!
+! Reservation example: Docker host pinned to .10
+! (Note: superseded by VM-side static config; pool retained as documentation)
+ip dhcp pool VLAN30-DOCKER-HOST
+ host 10.0.30.10 255.255.255.0
+ hardware-address bc24.11b4.3abb
+ default-router 10.0.30.1
+ dns-server 1.1.1.1 8.8.8.8
+ lease 0 12
+!
+ip domain name home.lab
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+voice-card 0
+!
+crypto pki token default removal timeout 0
+!
+license udi pid CISCO2851 sn <REDACTED>
+username admin privilege 15 secret <REDACTED>
+!
+redundancy
+!
+ip ssh version 2
+!
+! ===== WAN interface (legacy; shut down post-integration) =====
+interface GigabitEthernet0/0
+ description WAN-to-isp
+ ip address dhcp
+ ip nat outside
+ ip virtual-reassembly in
+ shutdown
+ duplex auto
+ speed auto
+!
+! ===== LAN trunk to SW1 =====
+interface GigabitEthernet0/1
+ description LAN-TO-2960-SWITCH
+ no ip address
+ ip virtual-reassembly in
+ duplex auto
+ speed auto
+!
+! ===== VLAN subinterfaces (router-on-a-stick) =====
+interface GigabitEthernet0/1.10
+ description VLAN10-USERS-gateway
+ encapsulation dot1Q 10
+ ip address 10.0.10.1 255.255.255.0
+ ip virtual-reassembly in
+!
+interface GigabitEthernet0/1.20
+ description VLAN20-SERVERS-gateway
+ encapsulation dot1Q 20
+ ip address 10.0.20.1 255.255.255.0
+ ip virtual-reassembly in
+!
+interface GigabitEthernet0/1.30
+ description VLAN30-DMZ-gateway
+ encapsulation dot1Q 30
+ ip address 10.0.30.1 255.255.255.0
+ ip virtual-reassembly in
+!
+interface GigabitEthernet0/1.40
+ description VLAN40-SECURITYLAB-gateway
+ encapsulation dot1Q 40
+ ip address 10.0.40.1 255.255.255.0
+!
+! ===== Transit link to pfSense =====
+interface GigabitEthernet0/1.99
+ description TRANSIT-TO-PFSENSE
+ encapsulation dot1Q 99
+ ip address 192.168.99.2 255.255.255.252
+!
+interface BRI0/0/0
+ no ip address
+ encapsulation hdlc
+ shutdown
+!
+interface Serial0/1/0
+ no ip address
+ shutdown
+!
+ip forward-protocol nd
+no ip http server
+no ip http secure-server
+!
+! Default route: send everything to pfSense
+ip route 0.0.0.0 0.0.0.0 192.168.99.1
+!
+control-plane
+!
+mgcp profile default
+!
+banner motd ^C
+***********************************************
+*  R1 (CISCO 2851) - AUTHORIZED ACCESS ONLY  *
+***********************************************
+^C
+!
+line con 0
+ logging synchronous
+ login local
+line aux 0
+line vty 0 4
+ exec-timeout 15 0
+ login local
+ transport input ssh
+!
+scheduler allocate 20000 1000
+end

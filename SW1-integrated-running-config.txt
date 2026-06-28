@@ -1,0 +1,150 @@
+!
+! SW1 - Cisco 2960 - Integrated Network Phase D
+! Captured: 2026-06-28
+! Role: L2 switching, VLAN trunking to R1 and Proxmox
+!
+version 12.2
+no service pad
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+!
+hostname SW1
+!
+boot-start-marker
+boot-end-marker
+!
+enable secret <REDACTED>
+!
+username admin privilege 15 secret <REDACTED>
+!
+no aaa new-model
+system mtu routing 1500
+vtp mode transparent
+!
+ip domain-name home.lab
+!
+! ===== Self-signed cert removed for portfolio publishing =====
+! crypto pki trustpoint TP-self-signed-<ID>
+!   (regenerate locally with: crypto key generate rsa modulus 2048)
+!
+spanning-tree mode pvst
+spanning-tree extend system-id
+!
+vlan internal allocation policy ascending
+!
+! ===== VLAN definitions =====
+vlan 10
+ name Users
+!
+vlan 20
+ name Servers
+!
+vlan 30
+ name Management
+!
+vlan 40
+ name SecurityLab
+!
+vlan 99
+ name Transit
+!
+vlan 999
+ name UNUSED-NATIVE
+!
+ip ssh version 2
+!
+! ===== Trunk to R1 (router-on-a-stick) =====
+interface FastEthernet0/1
+ description TRUNK-TO-R1
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,40,99
+ switchport mode trunk
+ switchport nonegotiate
+ spanning-tree portfast trunk
+ spanning-tree bpduguard enable
+!
+! ===== VLAN 10 (Users) access ports: Fa0/2 - Fa0/8 =====
+! All ports below use identical config:
+!   switchport access vlan 10
+!   switchport mode access
+!   spanning-tree portfast
+!   spanning-tree bpduguard enable
+! (Fa0/2 shown; Fa0/3 - Fa0/8 identical)
+interface FastEthernet0/2
+ switchport access vlan 10
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! ===== VLAN 20 (Servers) access ports: Fa0/9 - Fa0/15 =====
+! Identical config pattern as VLAN 10 ports, access vlan 20
+interface FastEthernet0/9
+ switchport access vlan 20
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! ===== VLAN 30 (Management/DMZ) access ports: Fa0/16 - Fa0/22 =====
+! Identical config pattern, access vlan 30
+interface FastEthernet0/16
+ switchport access vlan 30
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! ===== Unused ports: Fa0/23 - Fa0/48, Gi0/2 =====
+! All identically configured and shut down:
+!   description UNUSED
+!   switchport access vlan 999
+!   switchport mode access
+!   shutdown
+! (Fa0/23 shown; Fa0/24 - Fa0/48 and Gi0/2 identical)
+interface FastEthernet0/23
+ description UNUSED
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+! ===== Trunk to Proxmox (OptiPlex onboard NIC) =====
+interface GigabitEthernet0/1
+ description TRUNK-TO-OPTIPLEX
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,40,99
+ switchport mode trunk
+ switchport nonegotiate
+ spanning-tree portfast trunk
+ spanning-tree bpduguard enable
+!
+! ===== Default VLAN1 (unused, shut) =====
+interface Vlan1
+ no ip address
+ shutdown
+!
+! ===== Management SVI on VLAN 30 =====
+interface Vlan30
+ ip address 10.0.30.2 255.255.255.0
+!
+ip default-gateway 10.0.30.1
+no ip http server
+no ip http secure-server
+!
+banner motd ^C
+**********************************************
+*  SW1 (CISCO 2960) - AUTHORIZED ACCESS ONLY **
+**********************************************
+^C
+!
+line con 0
+ logging synchronous
+ login local
+line vty 0 4
+ exec-timeout 15 0
+ login local
+ transport input ssh
+line vty 5 15
+ exec-timeout 15 0
+ login local
+ transport input ssh
+!
+end

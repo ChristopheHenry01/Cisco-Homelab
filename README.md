@@ -1,5 +1,11 @@
 # Cisco CCNA-Aligned Standalone Lab
 
+> **Update (June 2026):** This standalone Cisco lab has been integrated into a
+> larger homelab behind a pfSense firewall. See
+> [PHASE-D-INTEGRATED.md](PHASE-D-INTEGRATED.md) for the updated configs and
+> the new topology. The Phase 0 standalone setup documented below remains as
+> the original baseline.
+
 A two-device enterprise network built on used Cisco hardware: a 2851 ISR router
 and a 2960 Catalyst switch. Configured from scratch as a CCNA-aligned standalone
 lab with three segmented VLANs, router-on-a-stick inter-VLAN routing, NAT/PAT,
